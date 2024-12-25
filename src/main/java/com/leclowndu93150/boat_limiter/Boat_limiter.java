@@ -1,8 +1,10 @@
 package com.leclowndu93150.boat_limiter;
 
+import com.leclowndu93150.boat_limiter.network.NetworkHandler;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -15,7 +17,8 @@ public class Boat_limiter {
     public static final String MODID = "boat_limiter";
     public Boat_limiter() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-        NetworkHandler.register();
+        MinecraftForge.EVENT_BUS.register(this);
+        NetworkHandler.init();
     }
 
     @Mod.EventBusSubscriber(modid = Boat_limiter.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)

@@ -2,24 +2,23 @@ package com.leclowndu93150.boat_limiter.mixin;
 
 import com.leclowndu93150.boat_limiter.BoatJumpAccessor;
 import com.leclowndu93150.boat_limiter.Config;
+import com.leclowndu93150.boat_limiter.network.NetworkHandler;
+import com.leclowndu93150.boat_limiter.network.SyncBoatJumpPacket;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 @Mixin(Boat.class)
 public class BoatMixin implements BoatJumpAccessor {
-    @Unique
-    private static final float TICKS_PER_SECOND = 20.0F;
     @Unique
     private float boat_limiter$jumpPower;
     @Unique
@@ -27,44 +26,10 @@ public class BoatMixin implements BoatJumpAccessor {
     @Unique
     private int boat_limiter$jumpRechargeTicks;
 
-    @Override
-    public float getJumpPower() {
-        return boat_limiter$jumpPower;
-    }
-
-    @Override
-    public void setJumpPower(float power) {
-        this.boat_limiter$jumpPower = power;
-    }
-
-    @Override
-    public boolean isJumping() {
-        return boat_limiter$isJumping;
-    }
-
-    @Override
-    public void setJumping(boolean jumping) {
-        if (this.boat_limiter$isJumping != jumping) {
-            this.boat_limiter$isJumping = jumping;
-            if (!jumping) {
-                performJump((Boat)(Object)this);
-                this.boat_limiter$jumpRechargeTicks = 20;
-            }
-        }
-    }
-
-    @Override
-    public int getJumpRechargeTicks() {
-        return boat_limiter$jumpRechargeTicks;
-    }
-
-    @Override
-    public void setJumpRechargeTicks(int ticks) {
-        this.boat_limiter$jumpRechargeTicks = ticks;
-    }
-
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
+        Boat boat = (Boat)(Object)this;
+
         if (boat_limiter$jumpRechargeTicks > 0) {
             boat_limiter$jumpRechargeTicks--;
         }
@@ -73,7 +38,18 @@ public class BoatMixin implements BoatJumpAccessor {
             boat_limiter$jumpPower = Math.min(boat_limiter$jumpPower + 0.1f, 1.0f);
         }
 
-        Boat boat = (Boat)(Object)this;
+        if (!boat.level().isClientSide && boat.getControllingPassenger() instanceof ServerPlayer serverPlayer) {
+            NetworkHandler.sendToAllTracking(
+                    new SyncBoatJumpPacket(
+                            boat.getId(),
+                            boat_limiter$jumpPower,
+                            boat_limiter$isJumping,
+                            boat_limiter$jumpRechargeTicks
+                    ),
+                    serverPlayer
+            );
+        }
+
         Vec3 motion = boat.getDeltaMovement();
         if (motion.horizontalDistance() > 0.01) {
             checkAndClimb(boat, motion);
@@ -126,6 +102,42 @@ public class BoatMixin implements BoatJumpAccessor {
             boat.setDeltaMovement(boat.getDeltaMovement().add(0, jumpHeight, 0));
         }
         boat_limiter$jumpPower = 0.0f;
+    }
+
+    @Override
+    public float getJumpPower() {
+        return boat_limiter$jumpPower;
+    }
+
+    @Override
+    public void setJumping(boolean jumping) {
+        if (!jumping && boat_limiter$isJumping) {
+            Boat boat = (Boat)(Object)this;
+            if (boat.level().isClientSide) {
+                performJump(boat);
+            }
+        }
+        boat_limiter$isJumping = jumping;
+    }
+
+    @Override
+    public boolean isJumping() {
+        return boat_limiter$isJumping;
+    }
+
+    @Override
+    public void setJumpPower(float power) {
+        boat_limiter$jumpPower = power;
+    }
+
+    @Override
+    public int getJumpRechargeTicks() {
+        return boat_limiter$jumpRechargeTicks;
+    }
+
+    @Override
+    public void setJumpRechargeTicks(int ticks) {
+        boat_limiter$jumpRechargeTicks = ticks;
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
