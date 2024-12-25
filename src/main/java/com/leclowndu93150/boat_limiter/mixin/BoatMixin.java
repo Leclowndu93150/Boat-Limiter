@@ -1,12 +1,9 @@
 package com.leclowndu93150.boat_limiter.mixin;
 
 import com.leclowndu93150.boat_limiter.BoatJumpAccessor;
-import com.leclowndu93150.boat_limiter.BoatJumpPacket;
 import com.leclowndu93150.boat_limiter.Config;
-import com.leclowndu93150.boat_limiter.NetworkHandler;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,6 +13,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
 @Mixin(Boat.class)
 public class BoatMixin implements BoatJumpAccessor {
@@ -45,7 +44,13 @@ public class BoatMixin implements BoatJumpAccessor {
 
     @Override
     public void setJumping(boolean jumping) {
-        this.boat_limiter$isJumping = jumping;
+        if (this.boat_limiter$isJumping != jumping) {
+            this.boat_limiter$isJumping = jumping;
+            if (!jumping) {
+                performJump((Boat)(Object)this);
+                this.boat_limiter$jumpRechargeTicks = 20;
+            }
+        }
     }
 
     @Override
@@ -60,8 +65,6 @@ public class BoatMixin implements BoatJumpAccessor {
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
-        Boat boat = (Boat)(Object)this;
-
         if (boat_limiter$jumpRechargeTicks > 0) {
             boat_limiter$jumpRechargeTicks--;
         }
@@ -70,6 +73,7 @@ public class BoatMixin implements BoatJumpAccessor {
             boat_limiter$jumpPower = Math.min(boat_limiter$jumpPower + 0.1f, 1.0f);
         }
 
+        Boat boat = (Boat)(Object)this;
         Vec3 motion = boat.getDeltaMovement();
         if (motion.horizontalDistance() > 0.01) {
             checkAndClimb(boat, motion);
@@ -112,30 +116,6 @@ public class BoatMixin implements BoatJumpAccessor {
         };
 
         return originalSpeed * speedMultiplier;
-    }
-
-    @Inject(method = "controlBoat", at = @At("TAIL"))
-    private void handleJump(CallbackInfo ci) {
-        Boat boat = (Boat)(Object)this;
-
-        if (boat.isVehicle() && boat.getControllingPassenger() != null) {
-            boolean spacePressed = Minecraft.getInstance().options.keyJump.isDown();
-
-            if (spacePressed != boat_limiter$isJumping) {
-                if (boat.level().isClientSide) {
-                    NetworkHandler.INSTANCE.sendToServer(new BoatJumpPacket(boat.getId(), spacePressed));
-                }
-
-                if (spacePressed && boat_limiter$jumpRechargeTicks == 0) {
-                    boat_limiter$isJumping = true;
-                    boat_limiter$jumpPower = 0.0f;
-                } else if (!spacePressed) {
-                    performJump(boat);
-                    boat_limiter$isJumping = false;
-                    boat_limiter$jumpRechargeTicks = 20;
-                }
-            }
-        }
     }
 
     @Unique
