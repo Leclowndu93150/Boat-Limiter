@@ -115,6 +115,7 @@ public class BoatMixin implements BoatJumpAccessor {
             Boat boat = (Boat)(Object)this;
             if (boat.level().isClientSide) {
                 performJump(boat);
+                boat_limiter$jumpPower = 0.0f;
             }
         }
         boat_limiter$isJumping = jumping;

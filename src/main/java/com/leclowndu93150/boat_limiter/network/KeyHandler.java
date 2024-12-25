@@ -1,13 +1,12 @@
-package com.leclowndu93150.boat_limiter;
+package com.leclowndu93150.boat_limiter.network;
 
+import com.leclowndu93150.boat_limiter.Boat_limiter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import com.leclowndu93150.boat_limiter.network.NetworkHandler;
-import com.leclowndu93150.boat_limiter.network.JumpKeyPacket;
 
 @Mod.EventBusSubscriber(modid = Boat_limiter.MODID, value = Dist.CLIENT)
 public class KeyHandler {
