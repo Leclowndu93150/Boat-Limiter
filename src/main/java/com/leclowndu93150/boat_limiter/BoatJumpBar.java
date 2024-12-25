@@ -11,12 +11,29 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
 public class BoatJumpBar implements IGuiOverlay {
     private static final ResourceLocation JUMP_BAR = new ResourceLocation("textures/gui/icons.png");
+    private boolean wasJumping = false;
+    private boolean showPower = true;
 
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int width, int height) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null && minecraft.player.getVehicle() instanceof Boat boat) {
-            float jumpPower = ((BoatJumpAccessor)boat).getJumpPower();
+            BoatJumpAccessor accessor = (BoatJumpAccessor)boat;
+            float jumpPower = accessor.getJumpPower();
+
+            if (accessor.isJumping() && !wasJumping) {
+                showPower = true;
+            }
+
+            if (!accessor.isJumping() && wasJumping) {
+                showPower = false;
+            }
+
+            wasJumping = accessor.isJumping();
+
+            if (!showPower) {
+                jumpPower = 0.0f;
+            }
 
             int x = width / 2 - 91;
             int y = height - 29;
