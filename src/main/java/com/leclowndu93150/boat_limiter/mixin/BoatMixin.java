@@ -1,7 +1,9 @@
 package com.leclowndu93150.boat_limiter.mixin;
 
 import com.leclowndu93150.boat_limiter.BoatJumpAccessor;
+import com.leclowndu93150.boat_limiter.BoatJumpPacket;
 import com.leclowndu93150.boat_limiter.Config;
+import com.leclowndu93150.boat_limiter.NetworkHandler;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.client.Minecraft;
@@ -25,6 +27,36 @@ public class BoatMixin implements BoatJumpAccessor {
     private boolean boat_limiter$isJumping;
     @Unique
     private int boat_limiter$jumpRechargeTicks;
+
+    @Override
+    public float getJumpPower() {
+        return boat_limiter$jumpPower;
+    }
+
+    @Override
+    public void setJumpPower(float power) {
+        this.boat_limiter$jumpPower = power;
+    }
+
+    @Override
+    public boolean isJumping() {
+        return boat_limiter$isJumping;
+    }
+
+    @Override
+    public void setJumping(boolean jumping) {
+        this.boat_limiter$isJumping = jumping;
+    }
+
+    @Override
+    public int getJumpRechargeTicks() {
+        return boat_limiter$jumpRechargeTicks;
+    }
+
+    @Override
+    public void setJumpRechargeTicks(int ticks) {
+        this.boat_limiter$jumpRechargeTicks = ticks;
+    }
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
@@ -89,13 +121,19 @@ public class BoatMixin implements BoatJumpAccessor {
         if (boat.isVehicle() && boat.getControllingPassenger() != null) {
             boolean spacePressed = Minecraft.getInstance().options.keyJump.isDown();
 
-            if (spacePressed && !boat_limiter$isJumping && boat_limiter$jumpRechargeTicks == 0) {
-                boat_limiter$isJumping = true;
-                boat_limiter$jumpPower = 0.0f;
-            } else if (!spacePressed && boat_limiter$isJumping) {
-                performJump(boat);
-                boat_limiter$isJumping = false;
-                boat_limiter$jumpRechargeTicks = 20;
+            if (spacePressed != boat_limiter$isJumping) {
+                if (boat.level().isClientSide) {
+                    NetworkHandler.INSTANCE.sendToServer(new BoatJumpPacket(boat.getId(), spacePressed));
+                }
+
+                if (spacePressed && boat_limiter$jumpRechargeTicks == 0) {
+                    boat_limiter$isJumping = true;
+                    boat_limiter$jumpPower = 0.0f;
+                } else if (!spacePressed) {
+                    performJump(boat);
+                    boat_limiter$isJumping = false;
+                    boat_limiter$jumpRechargeTicks = 20;
+                }
             }
         }
     }
@@ -108,11 +146,6 @@ public class BoatMixin implements BoatJumpAccessor {
             boat.setDeltaMovement(boat.getDeltaMovement().add(0, jumpHeight, 0));
         }
         boat_limiter$jumpPower = 0.0f;
-    }
-
-    @Override
-    public float getJumpPower() {
-        return boat_limiter$jumpPower;
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))

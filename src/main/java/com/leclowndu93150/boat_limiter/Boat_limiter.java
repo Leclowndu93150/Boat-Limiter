@@ -15,6 +15,7 @@ public class Boat_limiter {
     public static final String MODID = "boat_limiter";
     public Boat_limiter() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        NetworkHandler.register();
     }
 
     @Mod.EventBusSubscriber(modid = Boat_limiter.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
