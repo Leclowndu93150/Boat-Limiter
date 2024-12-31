@@ -98,8 +98,10 @@ public class BoatMixin implements BoatJumpAccessor {
     private void performJump(Boat boat) {
         if (boat_limiter$jumpPower > 0.1f) {
             float baseJumpForce = boat_limiter$jumpPower * boat_limiter$jumpPower * 0.5f;
-            double jumpHeight = baseJumpForce * Config.JUMP_MULTIPLIER.get();
-            boat.setDeltaMovement(boat.getDeltaMovement().add(0, jumpHeight, 0));
+            double jumpMultiplier = boat.getStatus() == Boat.Status.IN_WATER
+                    ? Config.JUMP_MULTIPLIER.get() * 1.75
+                    : Config.JUMP_MULTIPLIER.get();
+            boat.setDeltaMovement(boat.getDeltaMovement().add(0, baseJumpForce * jumpMultiplier, 0));
         }
         boat_limiter$jumpPower = 0.0f;
     }
