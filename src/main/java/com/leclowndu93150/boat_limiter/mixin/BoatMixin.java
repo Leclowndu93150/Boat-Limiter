@@ -4,6 +4,7 @@ import com.leclowndu93150.boat_limiter.BoatJumpAccessor;
 import com.leclowndu93150.boat_limiter.Config;
 import com.leclowndu93150.boat_limiter.network.NetworkHandler;
 import com.leclowndu93150.boat_limiter.network.SyncBoatJumpPacket;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
@@ -11,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,6 +27,20 @@ public class BoatMixin implements BoatJumpAccessor {
     private boolean boat_limiter$isJumping;
     @Unique
     private int boat_limiter$jumpRechargeTicks;
+
+    @ModifyVariable(
+            method = "tick",
+            at = @At(value = "STORE"),
+            ordinal = 0
+    )
+    private Vec3 modifyFallSpeed(Vec3 motion) {
+        if (motion.y < 0) {
+            double fallSpeedMultiplier = Config.FALL_SPEED_MULTIPLIER.get();
+            return new Vec3(motion.x, Math.max(motion.y * fallSpeedMultiplier, -0.05), motion.z);
+        }
+        return motion;
+    }
+
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {

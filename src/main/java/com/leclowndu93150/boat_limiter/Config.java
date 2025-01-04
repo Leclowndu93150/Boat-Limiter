@@ -15,6 +15,7 @@ public class Config {
     public static final ForgeConfigSpec.DoubleValue JUMP_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue CRAWL_SPEED;
     public static final ForgeConfigSpec.DoubleValue MAX_CRAWL_HEIGHT;
+    public static final ForgeConfigSpec.DoubleValue FALL_SPEED_MULTIPLIER;
 
     static {
         BUILDER.push("Boat Speed Configuration");
@@ -46,6 +47,10 @@ public class Config {
         MAX_CRAWL_HEIGHT = BUILDER
                 .comment("Maximum height a boat can crawl")
                 .defineInRange("maxCrawlHeight", 1, 0.0, 200.0);
+
+        FALL_SPEED_MULTIPLIER = BUILDER
+                .comment("Fall speed multiplier (lower = slower falling, 0.05 recommended for slow falls)")
+                .defineInRange("fallSpeedMultiplier", 0.05, 0.0, 1.0);
 
         BUILDER.pop();
         SPEC = BUILDER.build();
